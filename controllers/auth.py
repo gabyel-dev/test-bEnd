@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import (
-    create_access_token, jwt_required, get_jwt_identity
+    create_access_token, jwt_required, get_jwt_identity, create_refresh_token
 )
 from models.database import get_db_connection
 from config import Config   
@@ -45,12 +45,20 @@ def login():
         
         if user and CheckPassword(user['password'], password):
             access_token = create_access_token(identity=str(user['id']))
-            return jsonify({'access_token': access_token, 'message': 'login successful'}), 200
+            ref_token = create_refresh_token(identity=str(user['id']))
+            return jsonify({'access_token': access_token, 'ref_token': ref_token, 'message': 'login successful'}), 200
     except:
         return jsonify({'message': 'login failed'})
     finally:
         cursor.close()
         conn.close()
+
+@auth_bp.post('/refresh')
+@jwt_required()
+def refresh():
+    curr_user = get_jwt_identity()
+    new_token = create_access_token(identity=curr_user)
+    return jsonify(access_token=new_token)
         
         
 @auth_bp.route('/protected', methods=['GET'])
